@@ -11,10 +11,13 @@ import javax.annotation.Resource;
 
 @Configuration
 public class MvcConfig implements WebMvcConfigurer {
+
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 登录拦截器
         registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
                         "/shop/**",
@@ -25,6 +28,7 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/user/code",
                         "/user/login"
                 ).order(1);
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).order(0);
+        // token刷新的拦截器
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").order(0);
     }
 }

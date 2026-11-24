@@ -15,13 +15,31 @@
     <description>Demo project for Spring Boot</description>
     <properties>
         <java.version>1.8</java.version>
-        <!-- 覆盖 Spring Boot 2.3.12 自带的旧版 Lombok（1.18.12），解决 JDK 21 下编译报错 -->
-        <lombok.version>1.18.34</lombok.version>
     </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>spring-data-redis</artifactId>
+                    <groupId>org.springframework.data</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>lettuce-core</artifactId>
+                    <groupId>io.lettuce</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-redis</artifactId>
+            <version>2.6.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>6.1.6.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -59,11 +77,10 @@
             <artifactId>hutool-all</artifactId>
             <version>5.7.17</version>
         </dependency>
-        <!--redisson 分布式锁（P64-P68）
-            注意版本：3.13.6 对应 Spring Boot 2.3.x，升到 3.16+ 会因 Spring Boot 版本不匹配启动失败-->
+        <!--redisson-->
         <dependency>
             <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-boot-starter</artifactId>
+            <artifactId>redisson</artifactId>
             <version>3.13.6</version>
         </dependency>
     </dependencies>

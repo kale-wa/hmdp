@@ -1,18 +1,10 @@
 package com.hmdp.service.impl;
 
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
-import com.hmdp.dto.Result;
-import com.hmdp.entity.Shop;
 import com.hmdp.entity.ShopType;
 import com.hmdp.mapper.ShopTypeMapper;
 import com.hmdp.service.IShopTypeService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.Resource;
-import java.util.List;
 
 /**
  * <p>
@@ -24,23 +16,5 @@ import java.util.List;
  */
 @Service
 public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> implements IShopTypeService {
-@Resource
-    private StringRedisTemplate stringRedisTemplate;
 
-    @Override
-    public List<ShopType> querryTypeList() {
-        String shopTypeListJson = stringRedisTemplate.opsForValue().get("shopType:list");
-
-        if(StrUtil.isNotBlank(shopTypeListJson)){
-            List<ShopType> shopTypeList = JSONUtil.toList(shopTypeListJson, ShopType.class);
-            return shopTypeList;
-        }
-
-        List<ShopType> typeList = this.query().orderByAsc("sort").list();
-        if(typeList != null){
-            Result.fail("店铺类型查询失败");
-        }
-        stringRedisTemplate.opsForValue().set("shopType:list", JSONUtil.toJsonStr(typeList));
-        return typeList ;
-    }
 }
