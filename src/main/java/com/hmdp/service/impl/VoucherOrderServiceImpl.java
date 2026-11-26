@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
+import com.hmdp.mq.OrderMessageProducer;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.hmdp.utils.RedisIdWorker;
@@ -17,7 +18,8 @@ import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import com.hmdp.mq.OrderMessageProducer;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.time.Duration;
@@ -48,7 +50,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedissonClient redissonClient;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-
+    @Resource
+    private OrderMessageProducer orderMessageProducer;
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
 
     static {
@@ -62,7 +65,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @PostConstruct
     private void init() {
-        SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
+       // SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
     }
 
     private class VoucherOrderHandler implements Runnable {
@@ -143,8 +146,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             }
         }
     }*/
-
-    private void createVoucherOrder(VoucherOrder voucherOrder) {
+    @Override
+    @Transactional
+    public void createVoucherOrder(VoucherOrder voucherOrder) {
         Long userId = voucherOrder.getUserId();
         Long voucherId = voucherOrder.getVoucherId();
         // 创建锁对象
@@ -191,19 +195,23 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     public Result seckillVoucher(Long voucherId) {
         Long userId = UserHolder.getUser().getId();
         long orderId = redisIdWorker.nextId("order");
-        // 1.执行lua脚本
+
         Long result = stringRedisTemplate.execute(
                 SECKILL_SCRIPT,
                 Collections.emptyList(),
-                voucherId.toString(), userId.toString(), String.valueOf(orderId)
-        );
+                voucherId.toString(), userId.toString(), String.valueOf(orderId));
+
         int r = result.intValue();
-        // 2.判断结果是否为0
         if (r != 0) {
-            // 2.1.不为0 ，代表没有购买资格
             return Result.fail(r == 1 ? "库存不足" : "不能重复下单");
         }
-        // 3.返回订单id
+
+        VoucherOrder voucherOrder = new VoucherOrder();
+        voucherOrder.setId(orderId);
+        voucherOrder.setUserId(userId);
+        voucherOrder.setVoucherId(voucherId);
+        orderMessageProducer.send(voucherOrder);
+
         return Result.ok(orderId);
     }
 
