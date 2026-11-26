@@ -18,6 +18,11 @@ public class RabbitMQConfig {
     public static final String ORDER_QUEUE = "hmdp.order.queue";
     public static final String ORDER_ROUTING_KEY = "order.create";
 
+    // 死信
+    public static final String ORDER_DLX_EXCHANGE = "hmdp.order.dlx.exchange";
+    public static final String ORDER_DLQ = "hmdp.order.dlq";
+    public static final String ORDER_DEAD_ROUTING_KEY = "order.dead";
+
     @Bean
     public DirectExchange orderExchange() {
         return ExchangeBuilder.directExchange(ORDER_EXCHANGE).durable(true).build();
@@ -25,14 +30,31 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue orderQueue() {
-        return QueueBuilder.durable(ORDER_QUEUE).build();
+        return QueueBuilder.durable(ORDER_QUEUE)
+                // 消费失败 nack 后转到这里
+                .withArgument("x-dead-letter-exchange", ORDER_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", ORDER_DEAD_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     public Binding orderBinding() {
-        return BindingBuilder.bind(orderQueue())
-                .to(orderExchange())
-                .with(ORDER_ROUTING_KEY);
+        return BindingBuilder.bind(orderQueue()).to(orderExchange()).with(ORDER_ROUTING_KEY);
+    }
+
+    @Bean
+    public DirectExchange orderDlxExchange() {
+        return ExchangeBuilder.directExchange(ORDER_DLX_EXCHANGE).durable(true).build();
+    }
+
+    @Bean
+    public Queue orderDlq() {
+        return QueueBuilder.durable(ORDER_DLQ).build();
+    }
+
+    @Bean
+    public Binding orderDlqBinding() {
+        return BindingBuilder.bind(orderDlq()).to(orderDlxExchange()).with(ORDER_DEAD_ROUTING_KEY);
     }
 
     @Bean
