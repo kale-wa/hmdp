@@ -182,7 +182,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 log.error("库存不足！");
                 return;
             }
-        
+
             // 7.创建订单
             save(voucherOrder);
         } finally {
